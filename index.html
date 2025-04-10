@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sudoku Challenge - College Competition</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #1a1a2e;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 5vh 5vw;
+      box-sizing: border-box;
+    }
+
+    h1 {
+      font-size: 6vw;
+      margin-bottom: 2vh;
+      text-align: center;
+    }
+
+    #timer {
+      font-size: 4vw;
+      margin-bottom: 2vh;
+      color: #00f7ff;
+    }
+
+    #sudoku-board {
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      width: 90vw;
+      max-width: 500px;
+      aspect-ratio: 1 / 1;
+      margin-bottom: 2vh;
+      border: 3px solid #ffffff;
+    }
+
+    input[type="number"] {
+      width: 100%;
+      height: 100%;
+      text-align: center;
+      font-size: 4.5vw;
+      background-color: #fff;
+      color: #000;
+      border: 1px solid #aaa;
+      box-sizing: border-box;
+    }
+
+    input[readonly] {
+      background-color: #e2e2e2;
+      font-weight: bold;
+    }
+
+    /* Bold borders every 3 cells */
+    input[data-col="2"],
+    input[data-col="5"] {
+      border-right: 3px solid #000;
+    }
+
+    input[data-col="0"] {
+      border-left: 3px solid #000;
+    }
+
+    input[data-row="2"],
+    input[data-row="5"] {
+      border-bottom: 3px solid #000;
+    }
+
+    input[data-row="0"] {
+      border-top: 3px solid #000;
+    }
+
+    #win-message {
+      margin-top: 2vh;
+      font-size: 5vw;
+      color: #0f0;
+      text-align: center;
+    }
+
+    #refresh {
+      margin-top: 2vh;
+      padding: 2vw 5vw;
+      font-size: 4vw;
+      background-color: #00f7ff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      color: #000;
+    }
+
+    #refresh:hover {
+      background-color: #00d5dd;
+    }
+
+    @media (min-width: 600px) {
+      h1 { font-size: 3em; }
+      #timer { font-size: 1.2em; }
+      input[type="number"] { font-size: 1.2em; }
+      #win-message { font-size: 1.5em; }
+      #refresh { font-size: 1em; }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Sudoku Challenge</h1>
+  <div id="timer">⏱️ Time: 00:00</div>
+  <div id="sudoku-board"></div>
+  <div id="win-message"></div>
+  <button id="refresh" onclick="loadRandomPuzzle()">🔁 New Puzzle</button>
+
+  <script>
+    const puzzles = [
+      [
+        [5,3,0, 0,7,0, 0,0,0],
+        [6,0,0, 1,9,5, 0,0,0],
+        [0,9,8, 0,0,0, 0,6,0],
+        [8,0,0, 0,6,0, 0,0,3],
+        [4,0,0, 8,0,3, 0,0,1],
+        [7,0,0, 0,2,0, 0,0,6],
+        [0,6,0, 0,0,0, 2,8,0],
+        [0,0,0, 4,1,9, 0,0,5],
+        [0,0,0, 0,8,0, 0,7,9]
+      ],
+      [
+        [0,0,0, 2,6,0, 7,0,1],
+        [6,8,0, 0,7,0, 0,9,0],
+        [1,9,0, 0,0,4, 5,0,0],
+        [8,2,0, 1,0,0, 0,4,0],
+        [0,0,4, 6,0,2, 9,0,0],
+        [0,5,0, 0,0,3, 0,2,8],
+        [0,0,9, 3,0,0, 0,7,4],
+        [0,4,0, 0,5,0, 0,3,6],
+        [7,0,3, 0,1,8, 0,0,0]
+      ]
+    ];
+
+    let original = [];
+    let timerInterval;
+    let seconds = 0;
+
+    function startTimer() {
+      clearInterval(timerInterval);
+      seconds = 0;
+      updateTimerDisplay();
+      timerInterval = setInterval(() => {
+        seconds++;
+        updateTimerDisplay();
+      }, 1000);
+    }
+
+    function stopTimer() {
+      clearInterval(timerInterval);
+    }
+
+    function updateTimerDisplay() {
+      const mins = String(Math.floor(seconds / 60)).padStart(2, '0');
+      const secs = String(seconds % 60).padStart(2, '0');
+      document.getElementById("timer").textContent = `⏱️ Time: ${mins}:${secs}`;
+    }
+
+    function loadRandomPuzzle() {
+      const board = document.getElementById("sudoku-board");
+      board.innerHTML = "";
+      document.getElementById("win-message").textContent = "";
+
+      const puzzle = puzzles[Math.floor(Math.random() * puzzles.length)];
+      original = JSON.parse(JSON.stringify(puzzle));
+
+      for (let row = 0; row < 9; row++) {
+        for (let col = 0; col < 9; col++) {
+          const input = document.createElement("input");
+          input.type = "number";
+          input.min = 1;
+          input.max = 9;
+          input.dataset.row = row;
+          input.dataset.col = col;
+          if (puzzle[row][col] !== 0) {
+            input.value = puzzle[row][col];
+            input.readOnly = true;
+          } else {
+            input.addEventListener("input", checkWin);
+          }
+          board.appendChild(input);
+        }
+      }
+
+      startTimer();
+    }
+
+    function checkWin() {
+      const inputs = document.querySelectorAll("#sudoku-board input");
+      let grid = Array.from({ length: 9 }, () => Array(9).fill(0));
+
+      inputs.forEach(input => {
+        const row = parseInt(input.dataset.row);
+        const col = parseInt(input.dataset.col);
+        const value = parseInt(input.value) || 0;
+        grid[row][col] = value;
+      });
+
+      if (isSolved(grid)) {
+        showWin();
+      }
+    }
+
+    function showWin() {
+      document.getElementById("win-message").textContent = "🎉 Congratulations! You solved it!";
+      stopTimer();
+    }
+
+    function isSolved(grid) {
+      for (let i = 0; i < 9; i++) {
+        let row = new Set();
+        let col = new Set();
+        let box = new Set();
+        for (let j = 0; j < 9; j++) {
+          let r = grid[i][j], c = grid[j][i];
+          if (r === 0 || row.has(r)) return false;
+          if (c === 0 || col.has(c)) return false;
+          row.add(r); col.add(c);
+          let br = 3 * Math.floor(i / 3) + Math.floor(j / 3);
+          let bc = 3 * (i % 3) + (j % 3);
+          let b = grid[br][bc];
+          if (b === 0 || box.has(b)) return false;
+          box.add(b);
+        }
+      }
+      return true;
+    }
+
+    loadRandomPuzzle();
+  </script>
+</body>
+</html>
